@@ -1,9 +1,5 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
-if (!API_BASE_URL) {
-  throw new Error("NEXT_PUBLIC_API_URL environment variable is not defined")
-}
-
 const TOKEN_KEY = "token"
 
 interface ApiResponse<T> {
@@ -16,6 +12,10 @@ export async function apiClient<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
+  if (!API_BASE_URL) {
+    return { error: "NEXT_PUBLIC_API_URL environment variable is not defined" }
+  }
+
   const url = `${API_BASE_URL}${endpoint}`
   const token = typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null
   const headers = new Headers(options.headers)
