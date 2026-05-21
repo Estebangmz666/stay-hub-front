@@ -29,7 +29,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { CreateAccommodationDialog } from "@/components/dashboard/create-accommodation-dialog"
 import { CreateRentalPackageDialog } from "@/components/dashboard/create-rental-package-dialog"
 
 // ---------------------------------------------------------------------------
@@ -436,16 +435,6 @@ export function HostPackagesView() {
 
   return (
     <div className="space-y-6">
-      {/* Create new accommodation */}
-      <div className="flex justify-end">
-        <CreateAccommodationDialog
-          onAccommodationCreated={(id) => {
-            setAccommodationIdInput(String(id))
-            setTimeout(() => handleLoadAccommodation(id), 500)
-          }}
-        />
-      </div>
-
       {/* Accommodation selector */}
       <Card>
         <CardHeader>

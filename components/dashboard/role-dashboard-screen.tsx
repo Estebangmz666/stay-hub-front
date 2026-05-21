@@ -30,6 +30,7 @@ import { DataTable, type DataTableColumn } from "@/components/dashboard/data-tab
 import { GuestAccommodationSearch } from "@/components/dashboard/guest-accommodation-search"
 import { HostPackagesView } from "@/components/dashboard/host-inventory-manager"
 import { HostAvailabilityView } from "@/components/dashboard/host-availability-view"
+import { CreateHouseForm } from "@/components/dashboard/create-accommodation-dialog"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PaymentNoticeModal } from "@/components/dashboard/payment-notice-modal"
@@ -990,6 +991,10 @@ function HostDashboard({ section }: { section?: string }) {
     return (
       <div className="space-y-6">
         <PageHeader title="Mis propiedades" description="Gestion de alojamientos registrados." />
+        <CreateHouseForm onCreated={() => {
+          // Aquí podrías refrescar la lista si lo deseas
+          window.location.reload()
+        }} />
         <TableFilters
           searchValue={query}
           onSearchChange={setQuery}
