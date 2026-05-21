@@ -47,7 +47,12 @@ interface CreateHouseFormProps {
 export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [mainImage, setMainImage] = useState<File | null>(null)
+  const [mainImageUrl, setMainImageUrl] = useState("")
+  const [mainImageMode, setMainImageMode] = useState<"file" | "url">("file")
   const [galleryImages, setGalleryImages] = useState<File[]>([])
+  const [galleryUrls, setGalleryUrls] = useState<string[]>([])
+  const [galleryMode, setGalleryMode] = useState<"file" | "url">("file")
+  const [tempGalleryUrl, setTempGalleryUrl] = useState("")
   const { toast } = useToast()
 
   const form = useForm<CreateHouseFormValues>({
@@ -76,19 +81,23 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
 
   const onSubmit = useCallback(
     async (values: CreateHouseFormValues) => {
-      if (!mainImage) {
+      // Validar imagen principal
+      const hasMainImage = mainImageMode === "file" ? mainImage : mainImageUrl.trim()
+      if (!hasMainImage) {
         toast({
-          title: "Imagen faltante",
-          description: "Selecciona una imagen principal",
+          title: "Imagen principal faltante",
+          description: mainImageMode === "file" ? "Selecciona una imagen" : "Pega una URL válida",
           variant: "destructive",
         })
         return
       }
 
-      if (galleryImages.length === 0) {
+      // Validar galería
+      const hasGalleryImages = galleryMode === "file" ? galleryImages.length > 0 : galleryUrls.length > 0
+      if (!hasGalleryImages) {
         toast({
           title: "Galería vacía",
-          description: "Añade al menos una imagen a la galería",
+          description: galleryMode === "file" ? "Añade al menos una imagen" : "Añade al menos una URL",
           variant: "destructive",
         })
         return
@@ -96,13 +105,22 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
 
       setIsLoading(true)
       try {
-        const mainImageBase64 = await convertFileToBase64(mainImage)
-        const galleryBase64 = await Promise.all(galleryImages.map(convertFileToBase64))
+        // Procesar imagen principal
+        const mainImageData =
+          mainImageMode === "file" && mainImage
+            ? await convertFileToBase64(mainImage)
+            : mainImageUrl.trim()
+
+        // Procesar galería
+        const galleryData =
+          galleryMode === "file"
+            ? await Promise.all(galleryImages.map(convertFileToBase64))
+            : galleryUrls
 
         const result = await createAccommodation({
           ...values,
-          mainImage: mainImageBase64,
-          images: galleryBase64,
+          mainImage: mainImageData,
+          images: galleryData,
         })
 
         if (result.error) {
@@ -121,7 +139,10 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
 
         form.reset()
         setMainImage(null)
+        setMainImageUrl("")
         setGalleryImages([])
+        setGalleryUrls([])
+        setTempGalleryUrl("")
         onCreated?.()
       } catch (error) {
         console.error("Error:", error)
@@ -134,7 +155,7 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
         setIsLoading(false)
       }
     },
-    [form, mainImage, galleryImages, toast, onCreated]
+    [form, mainImage, mainImageUrl, mainImageMode, galleryImages, galleryUrls, galleryMode, toast, onCreated]
   )
 
   const handleMainImageSelect = useCallback((file: File | null) => {
@@ -320,62 +341,187 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
                 {/* Main Image */}
                 <div>
                   <FormLabel className="mb-2 block">Imagen Principal</FormLabel>
-                  <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleMainImageSelect(e.target.files?.[0] || null)}
-                      className="hidden"
-                      id="mainImage"
-                    />
-                    <label htmlFor="mainImage" className="cursor-pointer block">
-                      <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
-                      {mainImage ? (
-                        <p className="text-xs font-medium text-green-600">{mainImage.name}</p>
-                      ) : (
-                        <p className="text-xs">Click para subir</p>
-                      )}
-                    </label>
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setMainImageMode("file")}
+                      className={`px-3 py-1 text-sm rounded transition-colors ${
+                        mainImageMode === "file"
+                          ? "bg-primary text-white"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      Subir archivo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMainImageMode("url")}
+                      className={`px-3 py-1 text-sm rounded transition-colors ${
+                        mainImageMode === "url"
+                          ? "bg-primary text-white"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      Pegar URL
+                    </button>
                   </div>
+
+                  {mainImageMode === "file" ? (
+                    <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleMainImageSelect(e.target.files?.[0] || null)}
+                        className="hidden"
+                        id="mainImage"
+                      />
+                      <label htmlFor="mainImage" className="cursor-pointer block">
+                        <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                        {mainImage ? (
+                          <p className="text-xs font-medium text-green-600">{mainImage.name}</p>
+                        ) : (
+                          <p className="text-xs">Click para subir</p>
+                        )}
+                      </label>
+                    </div>
+                  ) : (
+                    <Input
+                      type="url"
+                      placeholder="https://ejemplo.com/imagen.jpg"
+                      value={mainImageUrl}
+                      onChange={(e) => setMainImageUrl(e.target.value)}
+                      className="w-full"
+                    />
+                  )}
                 </div>
 
                 {/* Gallery Images */}
                 <div>
-                  <FormLabel className="mb-2 block">Galería ({galleryImages.length}/5)</FormLabel>
-                  <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleGalleryImageAdd(e.target.files?.[0] || null)}
-                      className="hidden"
-                      id="galleryImage"
-                      disabled={galleryImages.length >= 5}
-                    />
-                    <label htmlFor="galleryImage" className="cursor-pointer block">
-                      <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
-                      <p className="text-xs">Añadir imagen</p>
-                    </label>
+                  <FormLabel className="mb-2 block">Galería</FormLabel>
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setGalleryMode("file")}
+                      className={`px-3 py-1 text-sm rounded transition-colors ${
+                        galleryMode === "file"
+                          ? "bg-primary text-white"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      Subir archivos
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGalleryMode("url")}
+                      className={`px-3 py-1 text-sm rounded transition-colors ${
+                        galleryMode === "url"
+                          ? "bg-primary text-white"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      Pegar URLs
+                    </button>
+                    <span className="text-xs text-muted-foreground ml-auto flex items-center">
+                      {galleryMode === "file" ? galleryImages.length : galleryUrls.length}/5
+                    </span>
                   </div>
 
-                  {galleryImages.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2 mt-2">
-                      {galleryImages.map((img, idx) => (
-                        <div key={idx} className="relative group">
-                          <img
-                            src={URL.createObjectURL(img)}
-                            alt={`Gallery ${idx}`}
-                            className="w-full h-16 object-cover rounded"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeGalleryImage(idx)}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
+                  {galleryMode === "file" ? (
+                    <>
+                      <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleGalleryImageAdd(e.target.files?.[0] || null)}
+                          className="hidden"
+                          id="galleryImage"
+                          disabled={galleryImages.length >= 5}
+                        />
+                        <label htmlFor="galleryImage" className="cursor-pointer block">
+                          <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                          <p className="text-xs">Añadir imagen</p>
+                        </label>
+                      </div>
+
+                      {galleryImages.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mt-2">
+                          {galleryImages.map((img, idx) => (
+                            <div key={idx} className="relative group">
+                              <img
+                                src={URL.createObjectURL(img)}
+                                alt={`Gallery ${idx}`}
+                                className="w-full h-16 object-cover rounded"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeGalleryImage(idx)}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex gap-2">
+                        <Input
+                          type="url"
+                          placeholder="https://ejemplo.com/imagen.jpg"
+                          value={tempGalleryUrl}
+                          onChange={(e) => setTempGalleryUrl(e.target.value)}
+                          className="w-full"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (tempGalleryUrl.trim()) {
+                              if (galleryUrls.length >= 5) {
+                                toast({
+                                  title: "Límite alcanzado",
+                                  description: "Máximo 5 imágenes en galería",
+                                  variant: "destructive",
+                                })
+                                return
+                              }
+                              setGalleryUrls([...galleryUrls, tempGalleryUrl.trim()])
+                              setTempGalleryUrl("")
+                            }
+                          }}
+                          disabled={!tempGalleryUrl.trim() || galleryUrls.length >= 5}
+                        >
+                          Añadir
+                        </Button>
+                      </div>
+
+                      {galleryUrls.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mt-2">
+                          {galleryUrls.map((url, idx) => (
+                            <div key={idx} className="relative group">
+                              <img
+                                src={url}
+                                alt={`Gallery ${idx}`}
+                                className="w-full h-16 object-cover rounded"
+                                onError={(e) => {
+                                  e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23ddd' width='100' height='100'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%23999' font-size='14'%3EError%3C/text%3E%3C/svg%3E"
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setGalleryUrls(galleryUrls.filter((_, i) => i !== idx))}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -384,7 +530,11 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || !mainImage || galleryImages.length === 0}
+              disabled={
+                isLoading ||
+                !(mainImageMode === "file" ? mainImage : mainImageUrl.trim()) ||
+                !(galleryMode === "file" ? galleryImages.length > 0 : galleryUrls.length > 0)
+              }
             >
               {isLoading ? "Creando..." : "Crear Casa"}
             </Button>
