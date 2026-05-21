@@ -23,7 +23,17 @@ const createHouseSchema = z.object({
     .min(1, "Capacidad mínima de 1 huésped")
     .max(50, "Capacidad máxima de 50 huéspedes"),
   currency: z.string().length(3, "Debe ser 3 caracteres").default("COP"),
-  pricePerNight: z.string().refine((val) => !Number.isNaN(parseFloat(val)), "Debe ser un número válido"),
+  pricePerNight: z.coerce
+    .number()
+    .gt(0, "Debe ser un número mayor que 0"),
+  longitude: z.coerce
+    .number()
+    .min(-180, "Longitud debe ser mayor o igual a -180")
+    .max(180, "Longitud debe ser menor o igual a 180"),
+  latitude: z.coerce
+    .number()
+    .min(-90, "Latitud debe ser mayor o igual a -90")
+    .max(90, "Latitud debe ser menor o igual a 90"),
   locationDescription: z.string().min(1, "Requerida").max(100, "Máximo 100 caracteres"),
   city: z.string().min(1, "Requerida").max(100, "Máximo 100 caracteres"),
 })
@@ -47,7 +57,9 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
       description: "",
       capacity: 2,
       currency: "COP",
-      pricePerNight: "",
+      pricePerNight: 0,
+      longitude: 0,
+      latitude: 0,
       locationDescription: "",
       city: "",
     },
@@ -215,6 +227,36 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
                     </FormItem>
                   )}
                 />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="longitude"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Longitud</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.0001" min="-180" max="180" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="latitude"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Latitud</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.0001" min="-90" max="90" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}

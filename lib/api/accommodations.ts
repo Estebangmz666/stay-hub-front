@@ -25,8 +25,10 @@ export interface CreateAccommodationRequest {
   description: string
   capacity: number
   currency: string
-  pricePerNight: string
+  pricePerNight: number
   mainImage: string
+  longitude: number
+  latitude: number
   locationDescription: string
   city: string
   images: string[]
@@ -42,6 +44,8 @@ export interface CreateAccommodationResponse {
   currency: string
   pricePerNight: number
   mainImage: string
+  longitude: number
+  latitude: number
   locationDescription: string
   city: string
   images: string[]

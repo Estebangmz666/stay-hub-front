@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { CalendarCheck, Layers3, MoreHorizontal, Search, Trash, Edit, History, X, FlaskConical } from "lucide-react"
+import { CalendarCheck, Layers3, MoreHorizontal, Search, Trash, Edit, History, X } from "lucide-react"
 
 import { useToast } from "@/hooks/use-toast"
 import { getAccommodationById, type AccommodationDetailResponse } from "@/lib/api/accommodations"
@@ -58,53 +58,6 @@ function saveRecent(acc: AccommodationDetailResponse & { id: number }) {
   const updated = [{ id: acc.id, title: acc.title, city: acc.city }, ...current].slice(0, MAX_RECENT)
   localStorage.setItem(RECENT_KEY, JSON.stringify(updated))
 }
-
-// ---------------------------------------------------------------------------
-// Mock data — only used in development via the "Demo" button
-// ---------------------------------------------------------------------------
-
-const MOCK_ACCOMMODATION: AccommodationDetailResponse & { id: number } = {
-  id: 42,
-  title: "Cabaña El Roble — Vista al Valle",
-  city: "Armenia",
-  description: "Cabaña campestre con vista panorámica al Valle del Quindío.",
-  capacity: 8,
-  pricePerNight: 180000,
-  locationDescription: "A 10 min del Parque del Café",
-  images: [],
-  available: true,
-  host: { id: 1, email: "host@stayhub.dev", fullName: "Carlos Ramírez" },
-}
-
-const MOCK_PACKAGES: RentalPackageResponse[] = [
-  {
-    id: 1,
-    accommodationId: 42,
-    startDate: "2026-06-01",
-    endDate: "2026-06-30",
-    pricePerNight: "220000.00",
-    createdAt: "2026-05-01T10:00:00",
-    updatedAt: "2026-05-01T10:00:00",
-  },
-  {
-    id: 2,
-    accommodationId: 42,
-    startDate: "2026-07-01",
-    endDate: "2026-07-31",
-    pricePerNight: "95000.50",
-    createdAt: "2026-05-02T09:30:00",
-    updatedAt: "2026-05-10T14:15:00",
-  },
-  {
-    id: 3,
-    accommodationId: 42,
-    startDate: "2026-12-15",
-    endDate: "2026-12-31",
-    pricePerNight: "350000.00",
-    createdAt: "2026-05-03T11:00:00",
-    updatedAt: "2026-05-03T11:00:00",
-  },
-]
 
 // ---------------------------------------------------------------------------
 // Shared Zod schema
@@ -292,19 +245,6 @@ export function HostPackagesView() {
     defaultValues: { startDate: "", endDate: "", pricePerNight: "" },
   })
 
-  // Dev-only: load mock data without backend
-  const loadDemoData = () => {
-    saveRecent(MOCK_ACCOMMODATION)
-    setRecentAccommodations(loadRecent())
-    setSelectedAccommodation(MOCK_ACCOMMODATION)
-    setAccommodationIdInput(String(MOCK_ACCOMMODATION.id))
-    setPackages(MOCK_PACKAGES)
-    toast({
-      title: "🧪 Datos de prueba cargados",
-      description: "Estás viendo datos simulados. El backend no fue contactado.",
-    })
-  }
-
   // -------------------------------------------------------------------------
   // Load accommodation by ID
   // -------------------------------------------------------------------------
@@ -459,18 +399,6 @@ export function HostPackagesView() {
             <Button onClick={() => handleLoadAccommodation()} disabled={isLoadingAccommodation}>
               {isLoadingAccommodation ? "Cargando..." : "Cargar"}
             </Button>
-            {process.env.NODE_ENV === "development" && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={loadDemoData}
-                className="gap-1.5 border-dashed border-amber-400 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
-                title="Cargar datos de prueba (solo visible en desarrollo)"
-              >
-                <FlaskConical className="size-4" />
-                Demo
-              </Button>
-            )}
           </div>
 
           {/* Recent accommodations */}
