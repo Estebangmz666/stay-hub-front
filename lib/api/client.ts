@@ -44,7 +44,8 @@ export async function apiClient<T>(
 
     const data = await response.json()
     return { data }
-  } catch {
-    return { error: "Network error. Please try again." }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown network error"
+    return { error: `Network error: ${errorMessage}` }
   }
 }

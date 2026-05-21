@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useState, useCallback } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -16,16 +17,16 @@ import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 
 const createHouseSchema = z.object({
-  title: z.string().min(1, "Título es requerido").max(100, "Máximo 100 caracteres"),
-  description: z.string().min(1, "Descripción es requerida").max(1000, "Máximo 1000 caracteres"),
+  title: z.string().min(1, "Titulo es requerido").max(100, "Maximo 100 caracteres"),
+  description: z.string().min(1, "Descripcion es requerida").max(1000, "Maximo 1000 caracteres"),
   capacity: z.coerce
     .number()
-    .min(1, "Capacidad mínima de 1 huésped")
-    .max(50, "Capacidad máxima de 50 huéspedes"),
+    .min(1, "Capacidad minima de 1 huesped")
+    .max(50, "Capacidad maxima de 50 huespedes"),
   currency: z.string().length(3, "Debe ser 3 caracteres").default("COP"),
   pricePerNight: z.coerce
     .number()
-    .gt(0, "Debe ser un número mayor que 0"),
+    .gt(0, "Debe ser un numero mayor que 0"),
   longitude: z.coerce
     .number()
     .min(-180, "Longitud debe ser mayor o igual a -180")
@@ -34,8 +35,8 @@ const createHouseSchema = z.object({
     .number()
     .min(-90, "Latitud debe ser mayor o igual a -90")
     .max(90, "Latitud debe ser menor o igual a 90"),
-  locationDescription: z.string().min(1, "Requerida").max(100, "Máximo 100 caracteres"),
-  city: z.string().min(1, "Requerida").max(100, "Máximo 100 caracteres"),
+  locationDescription: z.string().min(1, "Requerida").max(100, "Maximo 100 caracteres"),
+  city: z.string().min(1, "Requerida").max(100, "Maximo 100 caracteres"),
 })
 
 type CreateHouseFormValues = z.infer<typeof createHouseSchema>
@@ -44,10 +45,13 @@ interface CreateHouseFormProps {
   onCreated?: () => void
 }
 
+const BASIC_IMAGE_URL_REGEX = /^https?:\/\/[^\s/$.?#].[^\s]*$/i
+
 export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [mainImage, setMainImage] = useState<File | null>(null)
-  const [galleryImages, setGalleryImages] = useState<File[]>([])
+  const [mainImageUrl, setMainImageUrl] = useState("")
+  const [galleryImageUrl, setGalleryImageUrl] = useState("")
+  const [galleryImages, setGalleryImages] = useState<string[]>([])
   const { toast } = useToast()
 
   const form = useForm<CreateHouseFormValues>({
@@ -65,21 +69,27 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
     },
   })
 
-  const convertFileToBase64 = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.readAsDataURL(file)
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = () => reject(new Error("Error al leer archivo"))
-    })
-  }
+  const isValidImageUrl = useCallback((value: string) => {
+    return BASIC_IMAGE_URL_REGEX.test(value.trim())
+  }, [])
 
   const onSubmit = useCallback(
     async (values: CreateHouseFormValues) => {
-      if (!mainImage) {
+      const normalizedMainImageUrl = mainImageUrl.trim()
+
+      if (!normalizedMainImageUrl) {
         toast({
           title: "Imagen faltante",
-          description: "Selecciona una imagen principal",
+          description: "Ingresa la URL de la imagen principal",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!isValidImageUrl(normalizedMainImageUrl)) {
+        toast({
+          title: "URL invalida",
+          description: "La imagen principal debe empezar con http:// o https://",
           variant: "destructive",
         })
         return
@@ -87,8 +97,8 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
 
       if (galleryImages.length === 0) {
         toast({
-          title: "Galería vacía",
-          description: "Añade al menos una imagen a la galería",
+          title: "Galeria vacia",
+          description: "Anade al menos una URL de imagen a la galeria",
           variant: "destructive",
         })
         return
@@ -96,13 +106,10 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
 
       setIsLoading(true)
       try {
-        const mainImageBase64 = await convertFileToBase64(mainImage)
-        const galleryBase64 = await Promise.all(galleryImages.map(convertFileToBase64))
-
         const result = await createAccommodation({
           ...values,
-          mainImage: mainImageBase64,
-          images: galleryBase64,
+          mainImage: normalizedMainImageUrl,
+          images: galleryImages.map((imageUrl) => imageUrl.trim()),
         })
 
         if (result.error) {
@@ -115,12 +122,13 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
         }
 
         toast({
-          title: "¡Casa creada!",
-          description: `"${result.data?.title}" está lista`,
+          title: "Casa creada",
+          description: `"${result.data?.title}" esta lista`,
         })
 
         form.reset()
-        setMainImage(null)
+        setMainImageUrl("")
+        setGalleryImageUrl("")
         setGalleryImages([])
         onCreated?.()
       } catch (error) {
@@ -134,57 +142,57 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
         setIsLoading(false)
       }
     },
-    [form, mainImage, galleryImages, toast, onCreated]
+    [form, mainImageUrl, galleryImages, toast, onCreated, isValidImageUrl]
   )
 
-  const handleMainImageSelect = useCallback((file: File | null) => {
-    if (file?.type.startsWith("image/")) {
-      setMainImage(file)
-    } else if (file) {
-      toast({
-        title: "Archivo inválido",
-        description: "Solo se aceptan imágenes",
-        variant: "destructive",
-      })
-    }
-  }, [toast])
+  const handleGalleryImageAdd = useCallback(() => {
+    const normalizedValue = galleryImageUrl.trim()
 
-  const handleGalleryImageAdd = useCallback((file: File | null) => {
-    if (!file) return
     if (galleryImages.length >= 5) {
       toast({
-        title: "Límite alcanzado",
-        description: "Máximo 5 imágenes en galería",
+        title: "Limite alcanzado",
+        description: "Maximo 5 imagenes en galeria",
         variant: "destructive",
       })
       return
     }
-    if (file.type.startsWith("image/")) {
-      setGalleryImages([...galleryImages, file])
-    } else {
+
+    if (!normalizedValue) {
       toast({
-        title: "Archivo inválido",
-        description: "Solo se aceptan imágenes",
+        title: "URL faltante",
+        description: "Ingresa una URL para anadirla a la galeria",
         variant: "destructive",
       })
+      return
     }
-  }, [galleryImages, toast])
+
+    if (!isValidImageUrl(normalizedValue)) {
+      toast({
+        title: "URL invalida",
+        description: "La URL debe empezar con http:// o https://",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setGalleryImages((previousImages) => [...previousImages, normalizedValue])
+    setGalleryImageUrl("")
+  }, [galleryImageUrl, galleryImages.length, toast, isValidImageUrl])
 
   const removeGalleryImage = useCallback((index: number) => {
-    setGalleryImages(galleryImages.filter((_, i) => i !== index))
-  }, [galleryImages])
+    setGalleryImages((previousImages) => previousImages.filter((_, imageIndex) => imageIndex !== index))
+  }, [])
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Crear Nueva Casa</CardTitle>
-        <CardDescription>Añade una nueva propiedad a tu inventario</CardDescription>
+        <CardDescription>Anade una nueva propiedad a tu inventario</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Left Column */}
               <div className="space-y-4">
                 <FormField
                   control={form.control}
@@ -193,7 +201,7 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
                     <FormItem>
                       <FormLabel>Nombre</FormLabel>
                       <FormControl>
-                        <Input placeholder="Cabaña en el valle" {...field} />
+                        <Input placeholder="Cabana en el valle" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -205,7 +213,7 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Descripción</FormLabel>
+                      <FormLabel>Descripcion</FormLabel>
                       <FormControl>
                         <Textarea placeholder="Describe tu propiedad..." className="resize-none h-20" {...field} />
                       </FormControl>
@@ -263,9 +271,9 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
                   name="locationDescription"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ubicación</FormLabel>
+                      <FormLabel>Ubicacion</FormLabel>
                       <FormControl>
-                        <Input placeholder="Cerca al Parque del Café" {...field} />
+                        <Input placeholder="Cerca al Parque del Cafe" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -273,7 +281,6 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
                 />
               </div>
 
-              {/* Right Column */}
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-2">
                   <FormField
@@ -317,58 +324,72 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
                   />
                 </div>
 
-                {/* Main Image */}
                 <div>
                   <FormLabel className="mb-2 block">Imagen Principal</FormLabel>
-                  <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleMainImageSelect(e.target.files?.[0] || null)}
-                      className="hidden"
-                      id="mainImage"
+                  <div className="space-y-3">
+                    <Input
+                      type="url"
+                      placeholder="https://images.example.com/main.jpg"
+                      value={mainImageUrl}
+                      onChange={(event) => setMainImageUrl(event.target.value)}
                     />
-                    <label htmlFor="mainImage" className="cursor-pointer block">
-                      <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
-                      {mainImage ? (
-                        <p className="text-xs font-medium text-green-600">{mainImage.name}</p>
-                      ) : (
-                        <p className="text-xs">Click para subir</p>
-                      )}
-                    </label>
+                    {mainImageUrl.trim() && (
+                      <div className="relative h-32 overflow-hidden rounded-lg border bg-muted">
+                        <Image
+                          src={mainImageUrl.trim()}
+                          alt="Vista previa imagen principal"
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Usa una URL completa que empiece por http:// o https://
+                    </p>
                   </div>
                 </div>
 
-                {/* Gallery Images */}
                 <div>
-                  <FormLabel className="mb-2 block">Galería ({galleryImages.length}/5)</FormLabel>
-                  <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleGalleryImageAdd(e.target.files?.[0] || null)}
-                      className="hidden"
-                      id="galleryImage"
-                      disabled={galleryImages.length >= 5}
-                    />
-                    <label htmlFor="galleryImage" className="cursor-pointer block">
-                      <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
-                      <p className="text-xs">Añadir imagen</p>
-                    </label>
+                  <FormLabel className="mb-2 block">Galeria ({galleryImages.length}/5)</FormLabel>
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <Input
+                        type="url"
+                        placeholder="https://images.example.com/gallery-1.jpg"
+                        value={galleryImageUrl}
+                        onChange={(event) => setGalleryImageUrl(event.target.value)}
+                        disabled={galleryImages.length >= 5}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleGalleryImageAdd}
+                        disabled={galleryImages.length >= 5}
+                      >
+                        <Upload className="h-4 w-4" />
+                        <span className="sr-only">Anadir imagen</span>
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Agrega al menos una URL de imagen para la galeria.
+                    </p>
                   </div>
 
                   {galleryImages.length > 0 && (
                     <div className="grid grid-cols-3 gap-2 mt-2">
-                      {galleryImages.map((img, idx) => (
-                        <div key={idx} className="relative group">
-                          <img
-                            src={URL.createObjectURL(img)}
-                            alt={`Gallery ${idx}`}
-                            className="w-full h-16 object-cover rounded"
+                      {galleryImages.map((imageUrl, index) => (
+                        <div key={`${imageUrl}-${index}`} className="relative h-16 overflow-hidden rounded group">
+                          <Image
+                            src={imageUrl}
+                            alt={`Gallery ${index}`}
+                            fill
+                            unoptimized
+                            className="object-cover rounded"
                           />
                           <button
                             type="button"
-                            onClick={() => removeGalleryImage(idx)}
+                            onClick={() => removeGalleryImage(index)}
                             className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <X className="h-3 w-3" />
@@ -384,7 +405,7 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || !mainImage || galleryImages.length === 0}
+              disabled={isLoading || !mainImageUrl.trim() || galleryImages.length === 0}
             >
               {isLoading ? "Creando..." : "Crear Casa"}
             </Button>
@@ -394,4 +415,3 @@ export function CreateHouseForm({ onCreated }: CreateHouseFormProps) {
     </Card>
   )
 }
-
