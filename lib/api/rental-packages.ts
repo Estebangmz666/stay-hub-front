@@ -17,7 +17,7 @@ export interface RentalPackageResponse {
   accommodationId: number;
   startDate: string;
   endDate: string;
-  pricePerNight: string; // BigDecimal serialized as string
+  pricePerNight: string; // BigDecimal — use string to avoid JS float precision loss
   createdAt: string;
   updatedAt: string;
 }

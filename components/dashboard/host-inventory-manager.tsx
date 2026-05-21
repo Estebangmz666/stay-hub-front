@@ -9,7 +9,6 @@ import { CalendarCheck, Layers3, MoreHorizontal, Search, Trash, Edit, History, X
 import { useToast } from "@/hooks/use-toast"
 import { getAccommodationById, type AccommodationDetailResponse } from "@/lib/api/accommodations"
 import {
-  createRentalPackage,
   getRentalPackages,
   updateRentalPackage,
   deleteRentalPackage,
@@ -239,12 +238,6 @@ export function HostPackagesView() {
   // Edit dialog: holds the package being edited (null = closed)
   const [editingPackage, setEditingPackage] = useState<RentalPackageResponse | null>(null)
 
-  // Create form
-  const createForm = useForm<PackageFormValues>({
-    resolver: zodResolver(packageSchema),
-    defaultValues: { startDate: "", endDate: "", pricePerNight: "" },
-  })
-
   // -------------------------------------------------------------------------
   // Load accommodation by ID
   // -------------------------------------------------------------------------
@@ -292,22 +285,6 @@ export function HostPackagesView() {
     } else {
       toast({ title: "Error", description: "No se pudieron cargar los paquetes.", variant: "destructive" })
     }
-  }
-
-  // -------------------------------------------------------------------------
-  // Create
-  // -------------------------------------------------------------------------
-
-  const onCreateSubmit = async (values: PackageFormValues) => {
-    if (!selectedAccommodation) return
-    const res = await createRentalPackage(selectedAccommodation.id, values)
-    if (res.error) {
-      toast({ title: "Error al crear", description: res.error, variant: "destructive" })
-      return
-    }
-    toast({ title: "Paquete creado correctamente" })
-    createForm.reset()
-    loadPackages(selectedAccommodation.id)
   }
 
   // -------------------------------------------------------------------------
@@ -464,55 +441,6 @@ export function HostPackagesView() {
                 accommodationId={selectedAccommodation.id}
                 onPackageCreated={() => loadPackages(selectedAccommodation.id)}
               />
-              <p className="text-sm text-muted-foreground mt-4">
-                También puedes usar el formulario a continuación para crear paquetes directamente.
-              </p>
-              <Form {...createForm}>
-                <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4 mt-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormField
-                      control={createForm.control}
-                      name="startDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fecha Inicio</FormLabel>
-                          <FormControl><Input type="date" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={createForm.control}
-                      name="endDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fecha Fin</FormLabel>
-                          <FormControl><Input type="date" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={createForm.control}
-                    name="pricePerNight"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Precio por noche</FormLabel>
-                        <FormControl>
-                          <Input type="text" inputMode="decimal" placeholder="150000.00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button type="submit" className="w-full">
-                    Crear Paquete
-                  </Button>
-                </form>
-              </Form>
             </CardContent>
           </Card>
 
