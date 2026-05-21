@@ -29,6 +29,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { CreateAccommodationDialog } from "@/components/dashboard/create-accommodation-dialog"
+import { CreateRentalPackageDialog } from "@/components/dashboard/create-rental-package-dialog"
 
 // ---------------------------------------------------------------------------
 // Persisted recent accommodations (localStorage)
@@ -434,6 +436,16 @@ export function HostPackagesView() {
 
   return (
     <div className="space-y-6">
+      {/* Create new accommodation */}
+      <div className="flex justify-end">
+        <CreateAccommodationDialog
+          onAccommodationCreated={(id) => {
+            setAccommodationIdInput(String(id))
+            setTimeout(() => handleLoadAccommodation(id), 500)
+          }}
+        />
+      </div>
+
       {/* Accommodation selector */}
       <Card>
         <CardHeader>
@@ -531,8 +543,15 @@ export function HostPackagesView() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              <CreateRentalPackageDialog
+                accommodationId={selectedAccommodation.id}
+                onPackageCreated={() => loadPackages(selectedAccommodation.id)}
+              />
+              <p className="text-sm text-muted-foreground mt-4">
+                También puedes usar el formulario a continuación para crear paquetes directamente.
+              </p>
               <Form {...createForm}>
-                <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
+                <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4 mt-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FormField
                       control={createForm.control}
